@@ -1,21 +1,25 @@
 class SessionsController < ApplicationController
+  before_action :check_users, only: %i(create)
   def new; end
 
   def create
-    user = User.find_by email: params[:session][:email].downcase
-    if user&.authenticate params[:session][:password]
-      log_in user
-      redirect_to user
-      # Log the user in and redirect to the user's show page.
-    else
-      flash.now[:danger] = t "invalid_email_password_combination"
-      # Create an error message.
-      render :new
-    end
+    log_in @user
+    params[:session][:remember_me] == "1" ? remember(@user) : forget(@user)
+    redirect_to @user
   end
 
   def destroy
-    log_out
+    log_out if logged_in?
     redirect_to root_url
+  end
+
+  private
+  def check_users
+    @user = User.find_by email: params[:session][:email].downcase
+    return if @user&.authenticate params[:session][:password]
+
+    flash.now[:danger] = t "invalid_email_password_combination"
+    # Create an error message.
+    render :new
   end
 end
